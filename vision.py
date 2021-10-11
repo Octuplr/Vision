@@ -15,10 +15,18 @@ import pandas as pd
 import datetime
 import time
 
+ts = time.time() # This is the current time. Do not penalize the associate for the system processing time.
 
 
 # https://github.com/ageitgey/face_recognition
 
+faceLocationModelTraining = "hog" # Due to memory limitations, I have to run "hog" when training, but I can use "cnn" during punches.
+faceLocationModel = "cnn" # Which face detection model to use. "hog" is less accurate but faster on CPUs. "cnn" is a more accurate deep-learning model which is GPU/CUDA accelerated (if available). Use "cnn" (this consumes MUCH more GPU memory)
+
+faceEncodingsJittersTraining = 100 # Only applied for training. Since I cannot run cnn location model during training (GPU memory limitations) I have to crank this higher to make up for it. Additionally this yields better results in the end.
+faceEncodingsJitters = 10 # How many times to re-sample the face when calculating encoding. Higher is more accurate, but slower (100 is 100x slower).
+# 5 works fine.
+# https://face-recognition.readthedocs.io/en/latest/face_recognition.html#:~:text=already%20know%20them.-,num_jitters,-%E2%80%93%20How%20many%20times
 
 fontsize = 20
 font = ImageFont.truetype("arial.ttf", fontsize)
@@ -43,7 +51,7 @@ def process_and_encode(images):
         name = image_path.split(os.path.sep)[-2]
 
         #check if there are any faces first
-        number_of_faces = len(face_recognition.face_locations(image))
+        number_of_faces = len(face_recognition.face_locations(image, model=faceLocationModelTraining))
         #print(number_of_faces)
         if (number_of_faces==1):
             # Encode the face into a 128-d embeddings vector
@@ -52,7 +60,7 @@ def process_and_encode(images):
             only_name=name.split('.')[1]
 
             # print("\n" + only_name)
-            known_encodings[Id] = face_recognition.face_encodings(image)[0]
+            known_encodings[Id] = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining)[0]
 
             row = [Id , only_name]
             # print(row)
@@ -164,7 +172,6 @@ def getNamesAndIds(path):
 
 
 def TrackImages(fileName = None):
-
     col_names =  ['Id','Date','Time','Accuracy']
     attendance = pd.DataFrame(columns = col_names)  
     
@@ -183,8 +190,8 @@ def TrackImages(fileName = None):
         loaded_dir_un = fileName
     unknown_image = face_recognition.load_image_file(loaded_dir_un)
 
-    face_locations = face_recognition.face_locations(unknown_image)
-    unknown_face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
+    face_locations = face_recognition.face_locations(unknown_image, model=faceLocationModel)
+    unknown_face_encodings = face_recognition.face_encodings(unknown_image, face_locations, num_jitters=faceEncodingsJitters)
     pil_image = Image.fromarray(unknown_image)
     draw = ImageDraw.Draw(pil_image)
 
@@ -194,42 +201,40 @@ def TrackImages(fileName = None):
     name = "Unknown"
 
     cords = {}
-
     for (top, right, bottom, left), unknown_face_encoding in zip(face_locations, unknown_face_encodings):
         # See if the face is a match for the known face(s)
-        matches = face_recognition.compare_faces(known_face_encodings, unknown_face_encoding,tolerance=0.6)
+        matches = face_recognition.compare_faces(known_face_encodings, unknown_face_encoding,tolerance=0.6) # Lower tolerance is more strict, (so reverse of accuracy %) .6 is typical best performance
 
 
         face_distances = face_recognition.face_distance(known_face_encodings, unknown_face_encoding)
         accuracyNpFloat = round((1-np.min(face_distances))*100, 2)
         if (accuracyNpFloat>bestAccuracy):
             bestAccuracy = accuracyNpFloat
-            best_match_index = np.argmin(face_distances)
-            if matches[best_match_index]:
-                name = known_face_names[best_match_index]
-
             cords["left"] = left
             cords["right"] = right
             cords["bottom"] = bottom
             cords["top"] = top
+        
+        best_match_index = np.argmin(face_distances)
+        if matches[best_match_index]:
+            name = known_face_names[best_match_index]
+
 
         draw.rectangle(((left, top), (right, bottom)), outline=(255, 0, 50))
         text_width, text_height = draw.textsize(name,font=font)
         draw.text((left + 3, bottom - text_height - 5), name + " (" + str(accuracyNpFloat) + ")%", fill=(150, 150, 150, 150))
 
 
-    # Draw a box around the face using the Pillow module
-    draw.rectangle(((cords["left"], cords["top"]), (cords["right"], cords["bottom"])), outline=(0, 0, 255))
-
-    # font = getFontSize(name,top, right, bottom, left)
-    # Draw a label with a name below the face
-    text_width, text_height = draw.textsize(name,font=font)
-    draw.rectangle(((cords["left"], cords["bottom"] - text_height - 10), (cords["right"], cords["bottom"])), fill=(0, 0, 255), outline=(0, 0, 255))
-    draw.text((cords["left"] + 3, cords["bottom"] - text_height - 5), name + " (" + str(bestAccuracy) + ")%", fill=(255, 255, 255, 255))
-
     #save in file
     if(name!="Unknown"):
-        ts = time.time()      
+        # Draw a box around the face using the Pillow module
+        draw.rectangle(((cords["left"], cords["top"]), (cords["right"], cords["bottom"])), outline=(0, 0, 255))
+
+        # font = getFontSize(name,top, right, bottom, left)
+        # Draw a label with a name below the face
+        text_width, text_height = draw.textsize(name,font=font)
+        draw.rectangle(((cords["left"], cords["bottom"] - text_height - 10), (cords["right"], cords["bottom"])), fill=(0, 0, 255), outline=(0, 0, 255))
+        draw.text((cords["left"] + 3, cords["bottom"] - text_height - 5), name + " (" + str(bestAccuracy) + ")%", fill=(255, 255, 255, 255))
         date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
         timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
         # Id=name.split('.')[0]
@@ -238,12 +243,12 @@ def TrackImages(fileName = None):
         attendance.loc[len(attendance)] = [name,date,timeStamp,acry]
     else :
         print("Unknown person.")
+        pil_image.show()
         return
             
     
     
-    # create attendance file
-    ts = time.time()      
+    # create attendance file   
     date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
     timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
     Hour,Minute,Second=timeStamp.split(":")
