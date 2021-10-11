@@ -1,25 +1,27 @@
-import shutil
-import face_recognition
-from PIL import Image, ImageDraw, ImageFont
-from tqdm import tqdm
-import time
-import pickle
-from tkinter import filedialog
-
-import tkinter as tk
-from tkinter import * 
-from tkinter import Message ,Text
-import cv2
+import sys
 import os
-import shutil
-import csv
 import numpy as np
+import pickle
+import cv2
+import csv
 from PIL import Image, ImageTk
+from tqdm import tqdm
+import face_recognition # This loads the models with it and takes a considerable amount of time.
+
+# Quality of life
+from PIL import ImageDraw, ImageFont
+from tkinter import filedialog
 import pandas as pd
 import datetime
 import time
-import tkinter.ttk as ttk
-import tkinter.font as font
+
+
+
+# https://github.com/ageitgey/face_recognition
+
+
+fontsize = 20
+font = ImageFont.truetype("arial.ttf", fontsize)
 
 def process_and_encode(images):
     # initialize the list of known encodings and known names
@@ -28,10 +30,10 @@ def process_and_encode(images):
     #known_names = []
     print("Encoding faces ...")
 
-    # with open('output/AssociateData/AssociateIDMapping.csv','w', newline='') as csvFile:
-    #     writer = csv.writer(csvFile)
-    #     writer.writerow(['Id', 'Name'])
-    # csvFile.close()
+    with open('output/AssociateData/AssociateIDMapping.csv','w', newline='') as csvFile:
+        writer = csv.writer(csvFile)
+        writer.writerow(['Id', 'Name'])
+    csvFile.close()
 
     for image_path in tqdm(images):
         # Load image
@@ -45,16 +47,19 @@ def process_and_encode(images):
         #print(number_of_faces)
         if (number_of_faces==1):
             # Encode the face into a 128-d embeddings vector
-            known_encodings[name] = face_recognition.face_encodings(image)[0]
-            print(name)
-            # Id=name.split('.')[0]
-            # only_name=name.split('.')[1]
-            # row = [Id , only_name]
-            #print(row)
-            # with open('output/AssociateData/AssociateIDMapping.csv','a', newline='') as csvFile:
-            #     writer = csv.writer(csvFile)
-            #     writer.writerow(row)
-            # csvFile.close()
+            
+            Id=name.split('.')[0]
+            only_name=name.split('.')[1]
+
+            # print("\n" + only_name)
+            known_encodings[Id] = face_recognition.face_encodings(image)[0]
+
+            row = [Id , only_name]
+            # print(row)
+            with open('output/AssociateData/AssociateIDMapping.csv','a', newline='') as csvFile:
+                writer = csv.writer(csvFile)
+                writer.writerow(row)
+            csvFile.close()
 
         elif(number_of_faces==0):
             ppl_with_bad_imgs.append(name)
@@ -158,9 +163,9 @@ def getNamesAndIds(path):
     return names,Ids
 
 
-def TrackImages():
+def TrackImages(fileName = None):
 
-    col_names =  ['Id','Name','Date','Time']
+    col_names =  ['Id','Date','Time','Accuracy']
     attendance = pd.DataFrame(columns = col_names)  
     
     # Load face encodings
@@ -172,7 +177,10 @@ def TrackImages():
     known_face_encodings = np.array(list(all_face_encodings.values()))
 
     #unknown_image = face_recognition.load_image_file("lecturer_test.jpg")
-    loaded_dir_un = filedialog.askopenfilename()
+    if fileName is None:
+        loaded_dir_un = filedialog.askopenfilename()
+    else:
+        loaded_dir_un = fileName
     unknown_image = face_recognition.load_image_file(loaded_dir_un)
 
     face_locations = face_recognition.face_locations(unknown_image)
@@ -181,39 +189,57 @@ def TrackImages():
     draw = ImageDraw.Draw(pil_image)
 
     count_unknown=0
+    
+    bestAccuracy = 0
+    name = "Unknown"
+
+    cords = {}
+
     for (top, right, bottom, left), unknown_face_encoding in zip(face_locations, unknown_face_encodings):
         # See if the face is a match for the known face(s)
-        matches = face_recognition.compare_faces(known_face_encodings, unknown_face_encoding,tolerance=0.45)
+        matches = face_recognition.compare_faces(known_face_encodings, unknown_face_encoding,tolerance=0.6)
 
-        name = "Unknown"
 
         face_distances = face_recognition.face_distance(known_face_encodings, unknown_face_encoding)
-        best_match_index = np.argmin(face_distances)
-        if matches[best_match_index]:
-            name = known_face_names[best_match_index]
+        accuracyNpFloat = round((1-np.min(face_distances))*100, 2)
+        if (accuracyNpFloat>bestAccuracy):
+            bestAccuracy = accuracyNpFloat
+            best_match_index = np.argmin(face_distances)
+            if matches[best_match_index]:
+                name = known_face_names[best_match_index]
 
-        # Draw a box around the face using the Pillow module
-        draw.rectangle(((left, top), (right, bottom)), outline=(0, 0, 255))
+            cords["left"] = left
+            cords["right"] = right
+            cords["bottom"] = bottom
+            cords["top"] = top
 
-        # font = getFontSize(name,top, right, bottom, left)
-        # Draw a label with a name below the face
-        text_width, text_height = draw.textsize(name)
-        draw.rectangle(((left, bottom - text_height - 10), (right, bottom)), fill=(0, 0, 255), outline=(0, 0, 255))
-        draw.text((left + 3, bottom - text_height - 5), name, fill=(255, 255, 255, 255))
+        draw.rectangle(((left, top), (right, bottom)), outline=(255, 0, 50))
+        text_width, text_height = draw.textsize(name,font=font)
+        draw.text((left + 3, bottom - text_height - 5), name + " (" + str(accuracyNpFloat) + ")%", fill=(150, 150, 150, 150))
 
-        #save in file
-        if(name!="Unknown"):
-            ts = time.time()      
-            date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-            timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
-            Id=name.split('.')[0]
-            only_name=name.split('.')[1]
-            attendance.loc[len(attendance)] = [Id,only_name,date,timeStamp]
-        else :
-            print("unknown person(s)")
-            count_unknown += 1
-            res_mes="number of unknown faces detected : " + str(count_unknown)
-            print(res_mes)
+
+    # Draw a box around the face using the Pillow module
+    draw.rectangle(((cords["left"], cords["top"]), (cords["right"], cords["bottom"])), outline=(0, 0, 255))
+
+    # font = getFontSize(name,top, right, bottom, left)
+    # Draw a label with a name below the face
+    text_width, text_height = draw.textsize(name,font=font)
+    draw.rectangle(((cords["left"], cords["bottom"] - text_height - 10), (cords["right"], cords["bottom"])), fill=(0, 0, 255), outline=(0, 0, 255))
+    draw.text((cords["left"] + 3, cords["bottom"] - text_height - 5), name + " (" + str(bestAccuracy) + ")%", fill=(255, 255, 255, 255))
+
+    #save in file
+    if(name!="Unknown"):
+        ts = time.time()      
+        date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+        timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+        # Id=name.split('.')[0]
+        # only_name=name.split('.')[1]
+        acry = str(bestAccuracy/100)
+        attendance.loc[len(attendance)] = [name,date,timeStamp,acry]
+    else :
+        print("Unknown person.")
+        return
+            
     
     
     # create attendance file
@@ -225,7 +251,7 @@ def TrackImages():
     img_fileName="output/Punches/Punch_"+date+"_"+Hour+"-"+Minute+"-"+Second+".png"
     pil_image.save(img_fileName)
     attendance.to_csv(fileName,index=False)
-    print("Punch: " + name);
+    print("Punch (ID): " + name + " (" + str(bestAccuracy) + "%)");
 
     # Remove the drawing library from memory as per the Pillow docs
     del draw
@@ -241,22 +267,35 @@ if __name__ == '__main__':
 
     needsHelp = False
 
+    if (not os.path.isdir("output/")):
+        os.makedirs("output/")
+    if (not os.path.isdir("output/AssociateData/")):
+        os.makedirs("output/AssociateData/")
+    if (not os.path.isdir("output/Punches/")):
+        os.makedirs("output/Punches/")
+
     if (argc < 2):
-    	needsHelp = True
+        needsHelp = True
     elif (args[1] == "-train"):
-    	TrainImages()
-    	quit()
+        TrainImages()
+        quit()
     elif (args[1] == "-h" or args[1] == "-help" or args[1] == "-?"):
-    	needsHelp = True
+        needsHelp = True
+    elif (args[1] == "-punch"):
+        if (argc >= 3):
+            TrackImages(args[2])
+            quit();
+        else:
+            TrackImages()
+            quit();
+
     elif (argc >= 3):
-	    if (args[1] == "append"):
-    		print("Not supported.")
-    		quit()
-	    elif (args[1] == "-check"):
-    		TrackImages();
+        if (args[1] == "append"):
+            print("[WIP] = Not yet implemented.")
+            quit()
 
     print('Usage: %s\n' % args[0]
-    	+ '\t-train: Train model for ALL associate faces.\n'
+        + '\t-train: Train model for ALL associate faces.\n'
         + '\t-append <associate ID>: Adds an associates face data to the model.\n'
-        + '\t-check <path-to-picture>: Checks an image for an associate.');
+        + '\t-punch [path-to-picture]: Checks an image for an associate. (If no image provided, a file picker dialog will open).');
     quit()
