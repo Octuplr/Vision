@@ -1,0 +1,7 @@
+data/
+├─ AssociatePhotos/
+│  ├─ {ID}.{FirstName}{LastName}/
+│  │  ├─ {photoID}.jpg
+│  │
+│  ├─ 1.DannyDevito/
+│  │  ├─ dv1.jpg
