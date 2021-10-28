@@ -28,6 +28,9 @@ faceEncodingsJitters = 10 # How many times to re-sample the face when calculatin
 # 5 works fine.
 # https://face-recognition.readthedocs.io/en/latest/face_recognition.html#:~:text=already%20know%20them.-,num_jitters,-%E2%80%93%20How%20many%20times
 
+faceEncodingsModel = "large"
+faceEncodingsModelTrain = "large"
+
 fontsize = 20
 font = ImageFont.truetype("arial.ttf", fontsize)
 
@@ -43,6 +46,7 @@ def process_and_encode(images):
         writer.writerow(['Id', 'Name'])
     csvFile.close()
 
+    run = 0;
     for image_path in tqdm(images):
         # Load image
         image = face_recognition.load_image_file(image_path)
@@ -60,14 +64,17 @@ def process_and_encode(images):
             only_name=name.split('.')[1]
 
             # print("\n" + only_name)
-            known_encodings[Id] = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining)[0]
+            # below is a hacky way of including every image, it's a horrible idea because it'll make every image its own "cluster" but it's honest work
+            known_encodings[Id + ":" + str(run)] = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0]
 
-            row = [Id , only_name]
+            row = [Id + ":" + str(run) , only_name]
             # print(row)
             with open('output/AssociateData/AssociateIDMapping.csv','a', newline='') as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerow(row)
             csvFile.close()
+
+            run=run+1
 
         elif(number_of_faces==0):
             ppl_with_bad_imgs.append(name)
@@ -171,29 +178,29 @@ def getNamesAndIds(path):
     return names,Ids
 
 
-def TrackImages(fileName = None):
+def TrackImages(fileName = None, showResult = True):
     col_names =  ['Id','Date','Time','Accuracy']
     attendance = pd.DataFrame(columns = col_names)  
     
     # Load face encodings
     with open('output/dataset_faces.dat', 'rb') as f:
-        all_face_encodings = pickle.load(f)
+        all_face_encodings = pickle.load(f)     # Load the model
 
     # Grab the list of names and the list of encodings
-    known_face_names = list(all_face_encodings.keys())
-    known_face_encodings = np.array(list(all_face_encodings.values()))
+    known_face_names = list(all_face_encodings.keys()) # Get employee ID's from model
+    known_face_encodings = np.array(list(all_face_encodings.values()))  # Get the encodings for each employee
 
-    #unknown_image = face_recognition.load_image_file("lecturer_test.jpg")
+
     if fileName is None:
         loaded_dir_un = filedialog.askopenfilename()
     else:
         loaded_dir_un = fileName
-    unknown_image = face_recognition.load_image_file(loaded_dir_un)
+    unknown_image = face_recognition.load_image_file(loaded_dir_un) # Load unknown face
 
-    face_locations = face_recognition.face_locations(unknown_image, model=faceLocationModel)
-    unknown_face_encodings = face_recognition.face_encodings(unknown_image, face_locations, num_jitters=faceEncodingsJitters)
-    pil_image = Image.fromarray(unknown_image)
-    draw = ImageDraw.Draw(pil_image)
+    face_locations = face_recognition.face_locations(unknown_image, model=faceLocationModel) # Find the faces
+    unknown_face_encodings = face_recognition.face_encodings(unknown_image, face_locations, num_jitters=faceEncodingsJitters, model=faceEncodingsModel)
+    # ^^ Generate the encodings for the unknown image
+    
 
     count_unknown=0
     
@@ -203,10 +210,13 @@ def TrackImages(fileName = None):
     cords = {}
     for (top, right, bottom, left), unknown_face_encoding in zip(face_locations, unknown_face_encodings):
         # See if the face is a match for the known face(s)
-        matches = face_recognition.compare_faces(known_face_encodings, unknown_face_encoding,tolerance=0.6) # Lower tolerance is more strict, (so reverse of accuracy %) .6 is typical best performance
-
+        matches = face_recognition.compare_faces(known_face_encodings, unknown_face_encoding,tolerance=0.75) # Lower tolerance is more strict, (so reverse of accuracy %) .6 is typical best performance
+        # ^^ Outputs array of _known_ faces inside the unknown image
+        # (high level call, gets the face distances, then gets the names associated with those distances, etc)
 
         face_distances = face_recognition.face_distance(known_face_encodings, unknown_face_encoding)
+        # ^^ Gets the actual distances between the unknown faces and the known face clusters
+        # (this is used to calculate the best result in addition to the accuracy %)
         accuracyNpFloat = round((1-np.min(face_distances))*100, 2)
         if (accuracyNpFloat>bestAccuracy):
             bestAccuracy = accuracyNpFloat
@@ -217,8 +227,10 @@ def TrackImages(fileName = None):
         
         best_match_index = np.argmin(face_distances)
         if matches[best_match_index]:
-            name = known_face_names[best_match_index]
+            name = known_face_names[best_match_index].split(":")[0] # Index is ID:run, where run is an arbitrary number indicating when this image was trained
 
+        pil_image = Image.fromarray(unknown_image)
+        draw = ImageDraw.Draw(pil_image)
 
         draw.rectangle(((left, top), (right, bottom)), outline=(255, 0, 50))
         text_width, text_height = draw.textsize(name,font=font)
@@ -243,7 +255,8 @@ def TrackImages(fileName = None):
         attendance.loc[len(attendance)] = [name,date,timeStamp,acry]
     else :
         print("Unknown person.")
-        pil_image.show()
+        if (showResult == True):
+            pil_image.show()
         return
             
     
@@ -262,7 +275,8 @@ def TrackImages(fileName = None):
     del draw
 
     # Display the resulting image
-    pil_image.show()
+    if (showResult == True):
+        pil_image.show()
 
 
 
@@ -288,7 +302,10 @@ if __name__ == '__main__':
         needsHelp = True
     elif (args[1] == "-punch"):
         if (argc >= 3):
-            TrackImages(args[2])
+            if (args[2] == "-noshow" or args[2] == "-ns"):
+                TrackImages(showResult = False)
+            else:
+                TrackImages(args[2])
             quit();
         else:
             TrackImages()
