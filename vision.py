@@ -35,18 +35,20 @@ fontsize = 20
 font = ImageFont.truetype("arial.ttf", fontsize)
 
 def process_and_encode(images):
+    print("Encoding ...")
+
+
     # initialize the list of known encodings and known names
     known_encodings = {}
     ppl_with_bad_imgs = []
     #known_names = []
-    print("Encoding faces ...")
 
     with open('output/AssociateData/AssociateIDMapping.csv','w', newline='') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(['Id', 'Name'])
     csvFile.close()
 
-    run = 0;
+    runNumber = {}; # Used to increment the number of the image we are training on (I.E. image ONE... image TWO...)
     for image_path in tqdm(images):
         # Load image
         image = face_recognition.load_image_file(image_path)
@@ -63,18 +65,26 @@ def process_and_encode(images):
             Id=name.split('.')[0]
             only_name=name.split('.')[1]
 
+            if (Id in runNumber):
+                runNumber[Id] = runNumber[Id]+1 # Increment (if key exists)
+            else:
+                runNumber[Id] = 0 # Create employee image number (key)
+
+
             # print("\n" + only_name)
             # below is a hacky way of including every image, it's a horrible idea because it'll make every image its own "cluster" but it's honest work
-            known_encodings[Id + ":" + str(run)] = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0]
+            known_encodings[Id + ":" + str(runNumber[Id])] = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0]
 
-            row = [Id + ":" + str(run) , only_name]
+
+            with open("output/encodings/" + Id + "_" + str(runNumber[Id]) + ".txt", "w") as text_file:
+                text_file.write(str(known_encodings[Id + ":" + str(runNumber[Id])]))
+
+            row = [Id + ":" + str(runNumber[Id]) , only_name]
             # print(row)
             with open('output/AssociateData/AssociateIDMapping.csv','a', newline='') as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerow(row)
             csvFile.close()
-
-            run=run+1
 
         elif(number_of_faces==0):
             ppl_with_bad_imgs.append(name)
@@ -84,29 +94,24 @@ def process_and_encode(images):
     if (len(ppl_with_bad_imgs)):
         # Converting integer list to string list 
         s = [i for i in ppl_with_bad_imgs] 
-      
-        # Join list items using join() 
-        res = " ".join(s)
-      
+        res = ", ".join(s)
         res = "invalid pics for: " + res
     else:
         res = "Traning finished"
     
     print(res)
-
-    
+    # Return the face encodings array
     return  known_encodings
 
 #######
 
 
-def TrainImages():
+def EncodeImages():
     global known_face_encodings
     global known_face_names
-    print("Starting training...")
+    print("Finding images...")
     
     dataset_dir="data/AssociatePhotos"
-    #names,Ids = getNamesAndIds(dataset_dir)
     
     images = []
     for direc, _, files in tqdm(os.walk(dataset_dir)):
@@ -123,59 +128,44 @@ def TrainImages():
 
 
 
-# def TrainLastImage(imgpath,_face_file_name):
-
-#     # Load face encodings
-#     with open('dataset_faces.dat', 'rb') as f:
-#         all_face_encodings = pickle.load(f)
-
-#     # Grab the list of names and the list of encodings
-#     known_face_names = list(all_face_encodings.keys())
-#     known_face_encodings = np.array(list(all_face_encodings.values()))
-#     print(os.path.join(imgpath,_face_file_name))
-#     image = face_recognition.load_image_file(os.path.join(imgpath,_face_file_name))
-#     temp=os.path.join(imgpath,_face_file_name)
-#     _name = os.path.basename(temp.split(os.path.sep)[-2])
-#     print("name %s : ",_name)
-#     print(known_face_encodings.shape)
-#     known_face_encodings2=dict(zip(known_face_names, known_face_encodings))
-#     print(known_face_encodings2.keys())
-#     print("lenght1 %d : ",len(known_face_encodings2))
-#     known_face_encodings2[_name]=face_recognition.face_encodings(image)[0]
-#     print(known_face_encodings2.keys())
-#     #known_face_encodings.append(face_recognition.face_encodings(image)[0])
-#     #known_face_names.append(_name)
-#     #known_face_encodings=np.concatenate(known_face_encodings,face_recognition.face_encodings(image)[0])
+def AppendEncoding(ID = None, image_path = None):
+    if image_path is None:
+        image_path = filedialog.askopenfilename()
+        if image_path is None:
+            print("No image provided.")
+            quit();
 
 
-#     print("lenght2 %d : ",len(known_face_encodings2))
-#     with open('dataset_faces.dat', 'wb') as f:
-#         pickle.dump(known_face_encodings2, f)
+    # Load face encodings
+    with open('output/dataset_faces.dat', 'rb') as f:
+        known_face_encodings = pickle.load(f)
 
+    image = face_recognition.load_image_file(image_path) # Load the image 
 
+    # print(os.path.basename(image_path))
+    # name = os.path.basename(image_path)
+    # ID = name.split('.')[0]
+    # only_name = name.split('.')[1]
+    if (int(ID) == 0):
+        print("ID Invalid. (NaN)")
+        quit();
 
-def getNamesAndIds(path):
-    #get the path of all the files in the folder
-    imagePaths=[os.path.join(path,f) for f in os.listdir(path)] 
-    print(imagePaths)
+    print("Adding new encoding for employee #" + ID + ".")
 
-    #create empth namelist
-    names=[]
-    #create empty ID list
-    Ids=[]
-    #now looping through all the image paths and loading the Ids and the images
-    for imagePath in imagePaths:
-        #getting the Id from the image
-         # print(os.path.basename(os.path.normpath(imagePath)))
-        imagePath_lastFolder=os.path.basename(os.path.normpath(imagePath))
-        Id=int(imagePath_lastFolder.split('.')[0])
-         # print(imagePath_lastFolder.split('.')[0])
+    maxImageNumber = -1
+    for key in known_face_encodings:
+        encodingId = key.split(":")[0]
+        if (encodingId == ID):
+            encodingRunNumber = int(key.split(":")[1])
+            if (maxImageNumber < encodingRunNumber):
+                maxImageNumber = encodingRunNumber
 
-        # extract the face name 
-        name=imagePath_lastFolder.split('.')[1]
-        names.append(name)
-        Ids.append(Id)        
-    return names,Ids
+    known_face_encodings[ID + ":" + str(maxImageNumber+1)]=face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0] # Add in the new face encoding
+    print(known_face_encodings.keys())
+    with open('output/dataset_faces.dat', 'wb') as f:
+        pickle.dump(known_face_encodings, f)
+
+    ## TODO: Append associate CSV file with new data
 
 
 def TrackImages(fileName = None, showResult = True):
@@ -296,7 +286,7 @@ if __name__ == '__main__':
     if (argc < 2):
         needsHelp = True
     elif (args[1] == "-train"):
-        TrainImages()
+        EncodeImages()
         quit()
     elif (args[1] == "-h" or args[1] == "-help" or args[1] == "-?"):
         needsHelp = True
@@ -311,13 +301,17 @@ if __name__ == '__main__':
             TrackImages()
             quit();
 
-    elif (argc >= 3):
-        if (args[1] == "append"):
-            print("[WIP] = Not yet implemented.")
-            quit()
+    elif (argc == 3 and (args[1] == "-a" or args[1] == "-append")):
+        AppendEncoding(args[2])
+        quit();
+
+    elif (argc >= 4):
+        if (args[1] == "-append" or args[1] == "-a"):
+            AppendEncoding(args[2], args[3])
+            quit();
 
     print('Usage: %s\n' % args[0]
         + '\t-train: Train model for ALL associate faces.\n'
-        + '\t-append <associate ID>: Adds an associates face data to the model.\n'
+        + '\t-append | -a: <associate ID> [path-to-picture]: Adds an associates face data to the model.\n'
         + '\t-punch [path-to-picture]: Checks an image for an associate. (If no image provided, a file picker dialog will open).');
     quit()
