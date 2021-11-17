@@ -1,0 +1,4 @@
+https://arsfutura.com/magazine/face-recognition-with-facenet-and-mtcnn/
+
+https://stackabuse.com/creating-a-neural-network-from-scratch-in-python-multi-class-classification/
+https://towardsdatascience.com/neural-networks-from-scratch-easy-vs-hard-b26ddc2e89c7

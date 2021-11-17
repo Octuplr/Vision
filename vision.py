@@ -73,13 +73,15 @@ def process_and_encode(images):
 
             # print("\n" + only_name)
             # below is a hacky way of including every image, it's a horrible idea because it'll make every image its own "cluster" but it's honest work
-            known_encodings[Id + ":" + str(runNumber[Id])] = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0]
+            encodingKey = Id + ":" + str(runNumber[Id])
+            encoding = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0]
+            known_encodings[encodingKey] = encoding
 
+            # with open("output/encodings/" + Id + "_" + str(runNumber[Id]) + ".txt", "w") as text_file:
+            #     text_file.write(str(known_encodings[Id + ":" + str(runNumber[Id])]))
+            np.savetxt("output/encodings/" + Id + "_" + str(runNumber[Id]) + ".csv", encoding, newline=',\n', delimiter=",")
 
-            with open("output/encodings/" + Id + "_" + str(runNumber[Id]) + ".txt", "w") as text_file:
-                text_file.write(str(known_encodings[Id + ":" + str(runNumber[Id])]))
-
-            row = [Id + ":" + str(runNumber[Id]) , only_name]
+            row = [encodingKey , only_name]
             # print(row)
             with open('output/AssociateData/AssociateIDMapping.csv','a', newline='') as csvFile:
                 writer = csv.writer(csvFile)
@@ -160,7 +162,9 @@ def AppendEncoding(ID = None, image_path = None):
             if (maxImageNumber < encodingRunNumber):
                 maxImageNumber = encodingRunNumber
 
-    known_face_encodings[ID + ":" + str(maxImageNumber+1)]=face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0] # Add in the new face encoding
+    encoding = face_recognition.face_encodings(image, num_jitters=faceEncodingsJittersTraining, model=faceEncodingsModelTrain)[0] # Add in the new face encoding
+    known_face_encodings[ID + ":" + str(maxImageNumber+1)] = encoding
+    np.savetxt("output/encodings/" + Id + "_" + str(maxImageNumber+1) + ".csv", encoding, newline=',\n', delimiter=",")
     print(known_face_encodings.keys())
     with open('output/dataset_faces.dat', 'wb') as f:
         pickle.dump(known_face_encodings, f)
@@ -251,15 +255,18 @@ def TrackImages(fileName = None, showResult = True):
             
     
     
-    # create attendance file   
-    date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-    timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
-    Hour,Minute,Second=timeStamp.split(":")
-    fileName="output/Punches/Punch_"+date+"_"+Hour+"-"+Minute+"-"+Second+".csv"
-    img_fileName="output/Punches/Punch_"+date+"_"+Hour+"-"+Minute+"-"+Second+".png"
-    pil_image.save(img_fileName)
-    attendance.to_csv(fileName,index=False)
-    print("Punch (ID): " + name + " (" + str(bestAccuracy) + "%)");
+    # create attendance file
+    if (bestAccuracy > 40):
+        date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+        timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+        Hour,Minute,Second=timeStamp.split(":")
+        fileName="output/Punches/Punch_"+date+"_"+Hour+"-"+Minute+"-"+Second+".csv"
+        img_fileName="output/Punches/Punch_"+date+"_"+Hour+"-"+Minute+"-"+Second+".png"
+        pil_image.save(img_fileName)
+        attendance.to_csv(fileName,index=False)
+        print("Punch (ID): " + name + " (" + str(bestAccuracy) + "%)");
+    else:
+        print("Low prediction accuracy (ID): " + name + " (" + str(bestAccuracy) + "%)");
 
     # Remove the drawing library from memory as per the Pillow docs
     del draw
