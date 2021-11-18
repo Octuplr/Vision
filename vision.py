@@ -15,13 +15,15 @@ import pandas as pd
 import datetime
 import time
 
+from neuralNetwork import genericNeuralNetwork
+
 ts = time.time() # This is the current time. Do not penalize the associate for the system processing time.
 
 
 # https://github.com/ageitgey/face_recognition
 
 faceLocationModelTraining = "hog" # Due to memory limitations, I have to run "hog" when training, but I can use "cnn" during punches.
-faceLocationModel = "cnn" # Which face detection model to use. "hog" is less accurate but faster on CPUs. "cnn" is a more accurate deep-learning model which is GPU/CUDA accelerated (if available). Use "cnn" (this consumes MUCH more GPU memory)
+faceLocationModel = "hog" # Which face detection model to use. "hog" is less accurate but faster on CPUs. "cnn" is a more accurate deep-learning model which is GPU/CUDA accelerated (if available). Use "cnn" (this consumes MUCH more GPU memory)
 
 faceEncodingsJittersTraining = 100 # Only applied for training. Since I cannot run cnn location model during training (GPU memory limitations) I have to crank this higher to make up for it. Additionally this yields better results in the end.
 faceEncodingsJitters = 10 # How many times to re-sample the face when calculating encoding. Higher is more accurate, but slower (100 is 100x slower).
@@ -195,6 +197,10 @@ def TrackImages(fileName = None, showResult = True):
     unknown_face_encodings = face_recognition.face_encodings(unknown_image, face_locations, num_jitters=faceEncodingsJitters, model=faceEncodingsModel)
     # ^^ Generate the encodings for the unknown image
     
+    modelGeneric = genericNeuralNetwork()
+    modelGeneric.loadFile("output/model.ognn")
+
+    modelGeneric.printInfo()
 
     count_unknown=0
     
@@ -219,6 +225,14 @@ def TrackImages(fileName = None, showResult = True):
             cords["bottom"] = bottom
             cords["top"] = top
         
+        rawPredict = modelGeneric.predictRaw([unknown_face_encoding])
+        index = rawPredict.argmax()
+        gnnAccuracy = round((rawPredict[0][index])*100, 2)
+        # print(rawPredict)
+        print("[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%")
+        if (gnnAccuracy >= 60):
+            name = index+1
+
         best_match_index = np.argmin(face_distances)
         if matches[best_match_index]:
             name = known_face_names[best_match_index].split(":")[0] # Index is ID:run, where run is an arbitrary number indicating when this image was trained
@@ -227,8 +241,9 @@ def TrackImages(fileName = None, showResult = True):
         draw = ImageDraw.Draw(pil_image)
 
         draw.rectangle(((left, top), (right, bottom)), outline=(255, 0, 50))
-        text_width, text_height = draw.textsize(name,font=font)
-        draw.text((left + 3, bottom - text_height - 5), name + " (" + str(accuracyNpFloat) + ")%", fill=(150, 150, 150, 150))
+        text_width, text_height = draw.textsize("[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%",font=font)
+        draw.text((left + 3, bottom - text_height - 5), "[k-nearest] ID: " + name + " (" + str(accuracyNpFloat) + ")%", fill=(150, 150, 150, 150))
+        draw.text((left + 3, bottom - text_height - 3), "[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%", fill=(150, 150, 150, 150))
 
 
     #save in file
@@ -240,7 +255,8 @@ def TrackImages(fileName = None, showResult = True):
         # Draw a label with a name below the face
         text_width, text_height = draw.textsize(name,font=font)
         draw.rectangle(((cords["left"], cords["bottom"] - text_height - 10), (cords["right"], cords["bottom"])), fill=(0, 0, 255), outline=(0, 0, 255))
-        draw.text((cords["left"] + 3, cords["bottom"] - text_height - 5), name + " (" + str(bestAccuracy) + ")%", fill=(255, 255, 255, 255))
+        draw.text((left + 3, bottom - text_height - 8), "[k-nearest] ID: " + name + " (" + str(accuracyNpFloat) + ")%", fill=(255, 255, 255, 255))
+        draw.text((left + 3, bottom - text_height + 3), "[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%", fill=(255, 255, 255, 255))
         date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
         timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
         # Id=name.split('.')[0]
@@ -249,8 +265,8 @@ def TrackImages(fileName = None, showResult = True):
         attendance.loc[len(attendance)] = [name,date,timeStamp,acry]
     else :
         print("Unknown person.")
-        if (showResult == True):
-            pil_image.show()
+        # if (showResult == True):
+            # pil_image.show()
         return
             
     
@@ -264,7 +280,7 @@ def TrackImages(fileName = None, showResult = True):
         img_fileName="output/Punches/Punch_"+date+"_"+Hour+"-"+Minute+"-"+Second+".png"
         pil_image.save(img_fileName)
         attendance.to_csv(fileName,index=False)
-        print("Punch (ID): " + name + " (" + str(bestAccuracy) + "%)");
+        print("[k-nearest] Punch (ID): " + name + " (" + str(bestAccuracy) + "%)");
     else:
         print("Low prediction accuracy (ID): " + name + " (" + str(bestAccuracy) + "%)");
 

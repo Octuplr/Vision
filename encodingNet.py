@@ -1,7 +1,15 @@
 import numpy as np # ...
 # import cupy as np # Numpy in GPU, questionable
+from neuralNetwork import genericNeuralNetwork
+
 import matplotlib.pyplot as plt # for plotting
+import pandas as pd # logging loss/accuracy values to csv
 import pickle # loading encodings
+from tqdm import tqdm # loading bar
+
+from copy import deepcopy # evaluate model during training by making exact copy
+import os # filesystem, check/make dir
+
 
 # The number of employees (unique encodings) determines the number of classifiers the network will have.  
 
@@ -58,185 +66,83 @@ for i in range(numberOfEncodings):
 print("Data loaded and setup completed.")
 
 
-def sigmoid(x): # Squish input to (0,1)
-    return 1/(1+np.exp(-x))
-
-def sigmoid_der(x):
-    return sigmoid(x) *(1-sigmoid (x))
-def sigmoid_derv(s):
-	return s * (1 - s)
-
-def softmax(A):
-	exps = np.exp(A - np.max(A, axis=1, keepdims=True))
-	return exps/np.sum(exps, axis=1, keepdims=True)
-    # expA = np.exp(A)
-    # return expA / expA.sum(axis=1, keepdims=True)
-
-
-def cross_entropy(pred, real):
-    n_samples = real.shape[0]
-    res = pred - real
-    return res/n_samples
-
-def error(pred, real):
-	n_samples = real.shape[0]
-	logp = - np.log(pred[np.arange(n_samples), real.argmax(axis=1)])
-	loss = np.sum(logp)/n_samples
-	return loss
-
-
-
-class Nision3LayerNN:
-	def __init__(self, x, y):
-		self.input = x
-		self.output = y
-		self.lr = 0.005			# Learning rate
-		neurons = 128				# Number of hidden nodes
-		attributes = x.shape[1]		# Number of inputs
-		output_labels = y.shape[1]	# Number of possible classifications
-
-		# We have two hidden layers, this requires three weights/biases
-		#
-		#  input 			a1			a2		   a3
-		#	(O)		 __    (O)	 __    (O)	 __   (O)
-		#	(O)		/  |   (O)	|  |   (O)	|  \  (O)
-		#	(O)		|  |   (O)	|  |   (O)	|  |  (O)
-		#	 .		|W1|    .	|W2|    .	|W3|   .
-		#	 .		|  |    .	|  |    .	|  |   .
-		#	(O)		\__|   (O)	|__|   (O)	|__/  (O)
-		#  n=128 	 |	  n=128  |	  n=128  |	  n=N
-		#	    (128 x neurons)  |   (neurons x output_labels)
-		#				(neurons x neurons)
-		#
-
-		self.w1 = np.random.rand(attributes, neurons)	# Weights	(1) (input_size, output_size)
-		self.b1 = np.random.randn(neurons) 				# Biases	(1)
-		self.w2 = np.random.rand(neurons, neurons) 		# Weights	(2)
-		self.b2 = np.random.randn(neurons) 				# Biases	(2)
-		self.w3 = np.random.rand(neurons, output_labels)# Weights	(3)
-		self.b3 = np.random.randn(output_labels)		# Biases	(3)
-
-	def feedforward(self):
-		z1 = np.dot(self.input, self.w1) + self.b1	# z1
-		self.a1 = sigmoid(z1)						# Activation function for layer 1
-		z2 = np.dot(self.a1, self.w2) + self.b2		# z2
-		self.a2 = sigmoid(z2)						# Activation function for layer 2
-		z3 = np.dot(self.a2, self.w3) + self.b3		# z3
-		self.a3 = softmax(z3)						# Activation function for layer 3 (out of the neural network)
-
-
-	def backprop(self):
-		a3_delta = self.a3 - one_hot_labels #cross_entropy(self.a3, self.output) # w3
-		z2_delta = np.dot(a3_delta, self.w3.T)
-		a2_delta = z2_delta * sigmoid_derv(self.a2) # w2
-		z1_delta = np.dot(a2_delta, self.w2.T)
-		a1_delta = z1_delta * sigmoid_derv(self.a1) # w1
-
-		self.w3 -= self.lr * np.dot(self.a2.T, a3_delta)
-		self.b3 -= self.lr * np.sum(a3_delta, axis=0)
-		self.w2 -= self.lr * np.dot(self.a1.T, a2_delta)
-		self.b2 -= self.lr * np.sum(a2_delta, axis=0)
-		self.w1 -= self.lr * np.dot(self.input.T, a1_delta)
-		self.b1 -= self.lr * np.sum(a1_delta, axis=0)
-
-	def predict(self, data):
-		self.input = data
-		self.feedforward()
-		return self.a3.argmax()
-
-	def printLoss(self):
-		loss = error(self.a3, self.output)
-		print('Loss function value: ', loss)
-
-
-class Nision2LayerNN:
-	def __init__(self, x, y):
-		self.input = x
-		self.output = y
-		self.lr = 0.001			# Learning rate
-		neurons = 128				# Number of hidden nodes
-		attributes = x.shape[1]		# Number of inputs
-		output_labels = y.shape[1]	# Number of possible classifications
-
-		# We have two hidden layers, this requires three weights/biases
-		#
-		#  input 			a1 		   a2
-		#	(O)		 __    (O)	 __   (O)
-		#	(O)		/  |   (O)	|  \  (O)
-		#	(O)		|  |   (O)	|  |  (O)
-		#	 .		|W1|    .	|W2|   .
-		#	 .		|  |    .	|  |   .
-		#	(O)		\__|   (O)	|__/  (O)
-		#  n=128 	 |	  n=128  |	  n=N
-		#	    (128 x neurons)	 |
-		#				(neurons x output_labels)
-		#
-
-		self.w1 = np.random.rand(attributes, neurons)	# Weights	(1) (input_size, output_size)
-		self.b1 = np.random.randn(neurons) 				# Biases	(1)
-		self.w2 = np.random.rand(neurons, output_labels)# Weights	(2)
-		self.b2 = np.random.randn(output_labels)		# Biases	(2)
-
-	def feedforward(self):
-		z1 = np.dot(self.input, self.w1) + self.b1	# z1
-		self.a1 = sigmoid(z1)						# Activation function for layer 1
-		z2 = np.dot(self.a1, self.w2) + self.b2		# z2
-		self.a2 = softmax(z2)						# Activation function for layer 2
-
-
-	def backprop(self):
-		a2_delta = self.a2 - one_hot_labels #cross_entropy(self.a3, self.output) # w3
-		z1_delta = np.dot(a2_delta, self.w2.T)
-		a1_delta = z1_delta * sigmoid_derv(self.a1) # w1
-
-		self.w2 -= self.lr * np.dot(self.a1.T, a2_delta)
-		self.b2 -= self.lr * np.sum(a2_delta, axis=0)
-		self.w1 -= self.lr * np.dot(self.input.T, a1_delta)
-		self.b1 -= self.lr * np.sum(a1_delta, axis=0)
-
-	def predict(self, data):
-		self.input = data
-		self.feedforward()
-		return self.a2.argmax()
-
-	def printLoss(self):
-		loss = error(self.a2, self.output)
-		print('Loss function value: ', loss)
-
-
-# model3 = Nision3LayerNN(feature_set, one_hot_labels)
-
-# epochs = 50000
-# for x in range(epochs):
-# 	model3.feedforward()
-# 	model3.backprop()
-# 	if x % 2000 == 0:
-# 		model3.printLoss()
-
 def ga(model, data, output):
 	acc = 0
 	for xx,yy in zip(data, output):
-		s = model.predict([xx])
+		s = model.predictRaw(np.array([xx])).argmax()
 		if s == np.argmax(yy):
-			print("Right")
 			acc+=1
+
 	return acc/len(data)*100
 
-# print("Training accuracy: ", ga(model3, feature_set, [one_hot_labels]))
-# print("")
-# print("")
-# print("")
+if (not os.path.isdir("output/")):
+	os.makedirs("output/")
+if (not os.path.isdir("output/model_data/")):
+	os.makedirs("output/model_data/")
 
-model2 = Nision2LayerNN(feature_set, one_hot_labels)
+# https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw#:~:text=2/3%20the%20size%20of%20the%20input
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int((256/3)+numberOfClassifications), numpyLibrary=np)
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = 6, numpyLibrary=np)
+# modelGeneric = genericNeuralNetwork()
 
-epochs = 5000000
-for x in range(epochs):
-	model2.feedforward()
-	model2.backprop()
-	if x % 2000 == 0:
-		model2.printLoss()
+#found 50000 iterations with 32 neurons works well
 
-print("Training accuracy: ", ga(model2, feature_set, [one_hot_labels]))
-print("")
-print("")
-print("")
+def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
+	error_cost = []
+	tAccuracy = []
+	col_names = ['Loss Function','Training accuracy']
+	logCSV = pd.DataFrame(columns = col_names)
+	print("Training model. (" + epochs + " epochs)")
+	m.printInfo()
+	for x in tqdm(range(epochs)):
+	# for x in range(epochs):
+		m.feedforward()
+		m.backprop()
+		if log:
+			if x % logInterval == 0:
+				loss = m.getLoss()
+				error_cost.append(loss)
+				acc = None
+				if logAccuracy == True:
+					acc = ga(deepcopy(m), feature_set, one_hot_labels)
+					tAccuracy.append(acc)
+				logCSV.loc[len(logCSV)] = [loss, acc]
+
+	print("Training accuracy: ", ga(m, feature_set, one_hot_labels))
+	
+	fileName = str(m.attributes) + "-input_" + str(m.numberOfHiddenLayers+2) + "-layer_" + str(m.neurons) + "-neurons_" + str(m.output_labels) + "-classifications_model"
+
+	# Save model
+	modelGeneric.save("output/model_data/" + fileName + ".ognn") # Saves without activations or input data, but with the output data?
+
+	# Log to CSV
+	if log:
+		logCSV.to_csv("output/model_data/" + fileName + ".csv",index=False)
+
+		# Plot
+		fig, ax = plt.subplots()
+		fig.suptitle("Model results")
+		ax.set_title(fileName)
+		ax.set_xlabel("Run (x" + str(logInterval) + ")")
+		ax.plot(np.arange(1,len(error_cost)+1), error_cost, color="blue")
+		ax.set_ylabel("Loss", color="blue")
+
+		if logAccuracy:
+			ax2 = plt.twinx()
+			ax2.plot(np.arange(1,len(tAccuracy)+1), tAccuracy, color="orange")
+			# ax2.plot(np.arange(1,len(vAccuracy)+1), vAccuracy, color="brown")
+			ax2.set_ylabel("Accuracy")
+		
+		plt.savefig("output/model_data/" + fileName + ".svg", )
+		plt.show()
+		plt.clf()
+	return [error_cost, tAccuracy]
+
+# modelGeneric.loadFile("output/model.ognn")
+# modelGeneric.save("output/model.json", fileType = 1)
+
+train(modelGeneric, 50000, logInterval = 1000)
+# train(modelGeneric, 1000000, log=False)
+
+print("Training accuracy: ", ga(modelGeneric, feature_set, one_hot_labels))
+print(modelGeneric.predictRaw([feature_set[5]]))
