@@ -63,7 +63,7 @@ for i in range(numberOfEncodings):
 # plt.scatter(feature_set[:,0], feature_set[:,1], c=labels, cmap='plasma', s=100, alpha=0.5)
 # plt.show()
 
-print("Data loaded and setup completed.")
+print("\nData loaded and setup completed.")
 
 
 def ga(model, data, output):
@@ -81,7 +81,7 @@ if (not os.path.isdir("output/model_data/")):
 	os.makedirs("output/model_data/")
 
 # https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw#:~:text=2/3%20the%20size%20of%20the%20input
-modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int((256/3)+numberOfClassifications), numpyLibrary=np)
+# modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int((256/3)+numberOfClassifications), numpyLibrary=np)
 modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = 6, numpyLibrary=np)
 # modelGeneric = genericNeuralNetwork()
 
@@ -92,7 +92,7 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 	tAccuracy = []
 	col_names = ['Loss Function','Training accuracy']
 	logCSV = pd.DataFrame(columns = col_names)
-	print("Training model. (" + epochs + " epochs)")
+	print("Training model. (" + str(epochs) + " epochs)")
 	m.printInfo()
 	for x in tqdm(range(epochs)):
 	# for x in range(epochs):
