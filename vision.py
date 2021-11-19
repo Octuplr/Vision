@@ -23,7 +23,7 @@ ts = time.time() # This is the current time. Do not penalize the associate for t
 # https://github.com/ageitgey/face_recognition
 
 faceLocationModelTraining = "hog" # Due to memory limitations, I have to run "hog" when training, but I can use "cnn" during punches.
-faceLocationModel = "hog" # Which face detection model to use. "hog" is less accurate but faster on CPUs. "cnn" is a more accurate deep-learning model which is GPU/CUDA accelerated (if available). Use "cnn" (this consumes MUCH more GPU memory)
+faceLocationModel = "cnn" # Which face detection model to use. "hog" is less accurate but faster on CPUs. "cnn" is a more accurate deep-learning model which is GPU/CUDA accelerated (if available). Use "cnn" (this consumes MUCH more GPU memory)
 
 faceEncodingsJittersTraining = 100 # Only applied for training. Since I cannot run cnn location model during training (GPU memory limitations) I have to crank this higher to make up for it. Additionally this yields better results in the end.
 faceEncodingsJitters = 10 # How many times to re-sample the face when calculating encoding. Higher is more accurate, but slower (100 is 100x slower).

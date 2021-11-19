@@ -15,7 +15,7 @@ import os # filesystem, check/make dir
 
 # First we need to load our values (the encodings)
 print("Loading encodings...")
-with open('output/dataset_faces.dat', 'rb') as f:
+with open('output/encodings.dat', 'rb') as f:
     known_face_encodings = pickle.load(f)
 
 face_encodings = {}
@@ -63,7 +63,7 @@ for i in range(numberOfEncodings):
 # plt.scatter(feature_set[:,0], feature_set[:,1], c=labels, cmap='plasma', s=100, alpha=0.5)
 # plt.show()
 
-print("\nData loaded and setup completed.")
+print("Data loaded and setup completed.\n")
 
 
 def ga(model, data, output):
@@ -82,7 +82,7 @@ if (not os.path.isdir("output/model_data/")):
 
 # https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw#:~:text=2/3%20the%20size%20of%20the%20input
 # modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int((256/3)+numberOfClassifications), numpyLibrary=np)
-modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = 6, numpyLibrary=np)
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = 24, numpyLibrary=np)
 # modelGeneric = genericNeuralNetwork()
 
 #found 50000 iterations with 32 neurons works well
@@ -92,9 +92,10 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 	tAccuracy = []
 	col_names = ['Loss Function','Training accuracy']
 	logCSV = pd.DataFrame(columns = col_names)
-	print("Training model. (" + str(epochs) + " epochs)")
+	
 	m.printInfo()
-	for x in tqdm(range(epochs)):
+	print("\n")
+	for x in tqdm(range(epochs), desc="Training model", colour="green"):
 	# for x in range(epochs):
 		m.feedforward()
 		m.backprop()
@@ -141,7 +142,7 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 # modelGeneric.loadFile("output/model.ognn")
 # modelGeneric.save("output/model.json", fileType = 1)
 
-train(modelGeneric, 50000, logInterval = 1000)
+train(modelGeneric, 500000, logInterval = 1000)
 # train(modelGeneric, 1000000, log=False)
 
 print("Training accuracy: ", ga(modelGeneric, feature_set, one_hot_labels))
