@@ -226,12 +226,13 @@ def TrackImages(fileName = None, showResult = True):
             cords["top"] = top
         
         rawPredict = modelGeneric.predictRaw([unknown_face_encoding])
-        index = rawPredict.argmax()
-        gnnAccuracy = round((rawPredict[0][index])*100, 2)
+        label = rawPredict.argmax()
+        index = int(modelGeneric.implementationData[label])
+        gnnAccuracy = round((rawPredict[0][label])*100, 2)
         # print(rawPredict)
-        print("[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%")
+        print("[gnn model] ID: " + str(index) + " (" + str(gnnAccuracy) + ")%")
         if (gnnAccuracy >= 60):
-            name = index+1
+            name = str(index)
 
         best_match_index = np.argmin(face_distances)
         if matches[best_match_index]:
@@ -241,9 +242,9 @@ def TrackImages(fileName = None, showResult = True):
         draw = ImageDraw.Draw(pil_image)
 
         draw.rectangle(((left, top), (right, bottom)), outline=(255, 0, 50))
-        text_width, text_height = draw.textsize("[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%",font=font)
+        text_width, text_height = draw.textsize("[gnn model] ID: " + str(index) + " (" + str(gnnAccuracy) + ")%",font=font)
         draw.text((left + 3, bottom - text_height - 5), "[k-nearest] ID: " + name + " (" + str(accuracyNpFloat) + ")%", fill=(150, 150, 150, 150))
-        draw.text((left + 3, bottom - text_height - 3), "[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%", fill=(150, 150, 150, 150))
+        draw.text((left + 3, bottom - text_height - 3), "[gnn model] ID: " + str(index) + " (" + str(gnnAccuracy) + ")%", fill=(150, 150, 150, 150))
 
 
     #save in file
@@ -256,7 +257,7 @@ def TrackImages(fileName = None, showResult = True):
         text_width, text_height = draw.textsize(name,font=font)
         draw.rectangle(((cords["left"], cords["bottom"] - text_height - 10), (cords["right"], cords["bottom"])), fill=(0, 0, 255), outline=(0, 0, 255))
         draw.text((left + 3, bottom - text_height - 8), "[k-nearest] ID: " + name + " (" + str(accuracyNpFloat) + ")%", fill=(255, 255, 255, 255))
-        draw.text((left + 3, bottom - text_height + 3), "[gnn model] ID: " + str(index+1) + " (" + str(gnnAccuracy) + ")%", fill=(255, 255, 255, 255))
+        draw.text((left + 3, bottom - text_height + 3), "[gnn model] ID: " + str(index) + " (" + str(gnnAccuracy) + ")%", fill=(255, 255, 255, 255))
         date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
         timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
         # Id=name.split('.')[0]

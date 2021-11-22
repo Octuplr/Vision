@@ -42,23 +42,25 @@ def process_and_encode(images):
 #######
 
 
+encoder = faceEncoder(shapeModelSize="large", faceDetectorModel="cnn", numJitters=1, numUpsamples=0)
 
-encoder = faceEncoder(shapeModelSize="large", faceDetectorModel="hog", numJitters=100, numUpsamples=1)
 
-print("Finding images...")
-    
-dataset_dir="data/AssociatePhotos"
-    
-images = []
-for direc, _, files in os.walk(dataset_dir):
-    for file in files:
-        if file.endswith("jpg"):
-            images.append(os.path.join(direc,file))
+def gen(dataset_dir = "data/AssociatePhotos", encoding_file = 'output/encodings.dat'):
+    print("Finding images...")
+        
+    images = []
+    for direc, _, files in os.walk(dataset_dir):
+        for file in files:
+            if file.endswith("jpg"):
+                images.append(os.path.join(direc,file))
 
-embeddings = process_and_encode(images)
+    embeddings = process_and_encode(images)
 
-print("Saving embeddings (encodings)...")
-with open('output/encodings.dat', 'wb') as f:
-    pickle.dump(embeddings, f)
+    print("Saving embeddings (encodings)...")
+    with open(encoding_file, 'wb') as f:
+        pickle.dump(embeddings, f)
 
-print("Complete")
+    print("Complete")
+
+gen() # Generate static training images
+gen("data/TestingPhotos", "output/testing-encodings.dat") # Generate static testing images

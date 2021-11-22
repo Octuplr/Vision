@@ -8,6 +8,10 @@ import json # save as json file
 from json import JSONEncoder # encode ndarray
 import io
 
+# Generating random ID
+import random
+import string
+
 def sigmoid(x): # Squish input to (0,1)
     return 1/(1+np.exp(-x))
 
@@ -38,7 +42,24 @@ class NumpyArrayEncoder(JSONEncoder):
 
 
 class genericNeuralNetwork:
-	def __init__(self, data=np.zeros(shape=(1,1)), output=np.zeros(shape=(1,1)), attributes=0, outputs=0, learningRate = 0.005, hiddenLayers = 0, neurons = 0, numpyLibrary = np):
+	def __init__(self, data=np.zeros(shape=(1,1)), output=np.zeros(shape=(1,1)), attributes=0, outputs=0, learningRate = 0.005, hiddenLayers = 0, neurons = 0, numpyLibrary = np, implementationData = None, hashData = True, modelID = None):
+		'''
+		Builds a feedforward neural network
+		:param data: Array of the training data [ [input1, input2, ...], [input1, input2, ...], ..., [input1, input2, ...]]
+		:param output: Array of one-hot vectors
+		:param attributes: Number of inputs
+		:param outputs: Number of classifications (...outputs)
+		:param learningRate: Learning rate
+		:param hiddenLayers: Number of layers + 2 (input and output)
+		:param neurons: Number of interlinking neurons between the layers
+		:param numpyLibrary: The numpy library we use (so you can use cupy or numpy)
+		:param implementationData: Additional to store with the model
+		:param hashData: When building a unique model ID we hash the input data to better help distinguish models from each other. Setting this to false means we do not hash the input data.
+		:param modelID: This is the unique identifier for the model. If you provide a string, we set the modelID to it. Otherwise it is set to: hash({attributes}_{hiddenLayers+2}_{neurons}_{outputs}?_{hash(data)}) (where the end is either random or the data array hashed.)
+
+
+
+		'''
 		np = numpyLibrary
 		if (np == cp):
 			self.library = "cupy"
@@ -65,6 +86,14 @@ class genericNeuralNetwork:
 			self.output_labels = output.shape[1]	
 
 		self.iterations = 0
+
+		self.implementationData = implementationData
+
+		# Generate a unique ID
+		self.modelID = hash(str(self.attributes) + "_" + str(hiddenLayers+2) + "_" + str(self.neurons) + "_" + str(self.output_labels))
+		if hashData == True:
+			self.modelID = hash(str(self.modelID) + "_".join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(32)))
+
 
 		# We have n hidden layers, this requires n+2 weights/biases
 		#
@@ -164,6 +193,7 @@ class genericNeuralNetwork:
 
 	def printInfo(self):
 		print("Generic Neural Network.")
+		print("\tModel ID: " + str(self.modelID))
 		print("\tNumber of inputs:  " + str(self.attributes))
 		print("\tNumber of layers:  " + str(self.numberOfHiddenLayers+2))
 		print("\tNumber of neurons: " + str(self.neurons))
@@ -184,7 +214,11 @@ class genericNeuralNetwork:
 		modelData['output_labels'] = self.output_labels
 		modelData['numberOfHiddenLayers'] = self.numberOfHiddenLayers
 		modelData['iterations'] = self.iterations
+		modelData['modelID'] = self.modelID
 		modelData['library'] = self.library
+
+		#implementationData
+		modelData['implementationData'] = deepcopy(self.implementationData)
 
 		# Weights/Biases (the actual model, definitely needed)
 		modelData['iWeight'] = deepcopy(self.iWeight)
@@ -256,6 +290,15 @@ class genericNeuralNetwork:
 		if "library" in data:
 			self.library = data['library']
 
+
+		if "modelID" in data:
+			self.modelID = data['modelID']
+		else:
+			if strict:
+				raise MissingModelData("Missing model ID (unique identifier for this model)")
+
+		if "implementationData" in data:
+			self.implementationData = data['implementationData']
 
 		
 		if "iWeight" in data:

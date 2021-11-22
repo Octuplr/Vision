@@ -2,3 +2,18 @@ https://arsfutura.com/magazine/face-recognition-with-facenet-and-mtcnn/
 
 https://stackabuse.com/creating-a-neural-network-from-scratch-in-python-multi-class-classification/
 https://towardsdatascience.com/neural-networks-from-scratch-easy-vs-hard-b26ddc2e89c7
+
+encodings: Embeddings
+VisionNet: Phase 2 neural network that assigns labels to embeddings (embedding -> employee ID)
+
+
+
+------ class files ------
+neuralNetwork: The ANN class file
+faceEncoding: The faceEncoder class file (wrapper class to generate face embeddings)
+------ utilities ------
+generateEncodings: Uses faceEncoding to generate embeddings for provided faces
+generateVisionNet: Uses neuralNetwork to generate and test a model of face encodings (embeddings)
+------ application ------
+visionAPI: Simple class combining neuralNetwork and faceEncoding into a simple to use library used to train, append, and predict faces.
+visionServer: Web server that provides a REST API for web users to interact with the vision API. 

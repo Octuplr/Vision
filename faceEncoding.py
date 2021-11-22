@@ -44,9 +44,14 @@ shape_predictor_5_face_landmarks.dat: Finding face landmarks (smaller model)
 mmod_human_face_detector.dat: Detect and find face locations (rather than using hog)
 
 '''
+import gc
+
+
+class Dummy():
+	pass
 
 class faceEncoder():
-	def __init__(self, shapeModelSize = "large", faceDetectorModel = "hog", numJitters = 1, numUpsamples = 1, numpyLibrary = np):
+	def __init__(self, shapeModelSize = "large", faceDetectorModel = "hog", numJitters = 1, numUpsamples = 0, numpyLibrary = np):
 		np = numpyLibrary
 		if shapeModelSize == "large":
 			self.shapeModelSize = "large"
@@ -55,9 +60,10 @@ class faceEncoder():
 			self.shapeModelSize = "small"
 			self.shapePredictor = dlib.shape_predictor("data/dlib_models/shape_predictor_5_face_landmarks.dat")
 
+		self.faceDetectorHog = dlib.get_frontal_face_detector()
 		if faceDetectorModel == "hog":
 			self.faceDetectorModel = "hog"
-			self.faceDetector = dlib.get_frontal_face_detector()
+			self.faceDetector = self.faceDetectorHog
 		else:
 			self.faceDetectorModel = "cnn"
 			self.faceDetector = dlib.cnn_face_detection_model_v1("data/dlib_models/mmod_human_face_detector.dat")
@@ -94,11 +100,14 @@ class faceEncoder():
 		self.image = np.array(im)
 		return self.image
 
-	def faceLocationsRaw(self, image = None):
+	def faceLocationsRaw(self, image = None, forceHog = False):
 		if image is None:
 			image = self.image
 		try:
-			return self.faceDetector(image, self.numberOfUpsamples)
+			if (forceHog):
+				return self.faceDetectorHog(image = image, upsample_num_times = self.numberOfUpsamples)
+
+			return self.faceDetector(img = image, upsample_num_times = self.numberOfUpsamples)
 		except MemoryError:
 			raise MemoryError("Not enough memory, too many upsamples?")
 
@@ -108,7 +117,15 @@ class faceEncoder():
 		if (self.faceDetectorModel == "hog"):
 			return [self.trimRectangleToBounds(self.rectangleToTuple(faceLocation), image.shape) for faceLocation in self.faceLocationsRaw(image)]
 		else:
-			return [self.trimRectangleToBounds(self.rectangleToTuple(faceLocation.rect), image.shape) for faceLocation in self.faceLocationsRaw(image)]
+			try:
+				if self.faceDetector is None:
+					self.faceDetector = dlib.cnn_face_detection_model_v1("data/dlib_models/mmod_human_face_detector.dat")
+				return [self.trimRectangleToBounds(self.rectangleToTuple(faceLocation.rect), image.shape) for faceLocation in self.faceLocationsRaw(image)]
+			except RuntimeError: # Likely ran out of memory on GPU, run HOG as backup 
+				del self.faceDetector
+				self.faceDetector = None
+				gc.collect()
+				return [self.trimRectangleToBounds(self.rectangleToTuple(faceLocation), image.shape) for faceLocation in self.faceLocationsRaw(image, forceHog=True)]
 
 	def faceLandmarks(self, image = None, faceLocations = None):
 		if image is None:
@@ -124,4 +141,10 @@ class faceEncoder():
 		if image is None:
 			image = self.image
 		landmarks = self.faceLandmarks(image, faceLocations)
-		return [np.array(self.encoder.compute_face_descriptor(image, landmarkSet, self.numberOfJitters)) for landmarkSet in landmarks]
+		try:
+			return [np.array(self.encoder.compute_face_descriptor(image, landmarkSet, self.numberOfJitters)) for landmarkSet in landmarks]
+		except RuntimeError: # terrible way of getting around the CNN detector model chewing GPU memory.
+			del self.faceDetector
+			self.faceDetector = None
+			gc.collect()
+			return [np.array(self.encoder.compute_face_descriptor(image, landmarkSet, self.numberOfJitters)) for landmarkSet in landmarks]
