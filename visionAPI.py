@@ -289,7 +289,7 @@ class Vision():
 		# Save model
 		self.neuralNetwork.save(self.dataPath + "model_data/" + fileName + ".ognn") # Saves without activations or input data, but with the output data?
 		self.neuralNetwork.save(self.dataPath + self.modelName) # Saves without activations or input data, but with the output data?
-		
+
 
 		# Log to CSV
 		if log:
@@ -300,12 +300,12 @@ class Vision():
 			fig.suptitle("Model results")
 			ax.set_title(fileName)
 			ax.set_xlabel("Run (x" + str(logInterval) + ")")
-			ax.plot(npA.arange(1,len(error_cost)+1), error_cost, color="blue")
+			ax.plot(np.arange(1,len(error_cost)+1), error_cost, color="blue")
 			ax.set_ylabel("Loss", color="blue")
 
 			if logAccuracy:
 				ax2 = plt.twinx()
-				ax2.plot(npA.arange(1,len(tAccuracy)+1), tAccuracy, color="orange")
+				ax2.plot(np.arange(1,len(tAccuracy)+1), tAccuracy, color="orange")
 				# ax2.plot(np.arange(1,len(vAccuracy)+1), vAccuracy, color="brown")
 				ax2.set_ylabel("Average accuracy %", color="orange")
 			
@@ -360,11 +360,11 @@ class Vision():
 
 		self.encoder.cleanUp()
 
-	def rebuild(self, rebuildEmbeddings = True, rebuildVisionNet = True):
+	def rebuild(self, rebuildEmbeddings = True, rebuildVisionNet = True, epochs = 50000, log = False, logInterval = 100, logAccuracy = True):
 		'''
 			This will rebuild both the embedding file and the visionNet model.
 		'''
 		if rebuildEmbeddings:
 			self.rebuildEmbeddings()
 		if rebuildVisionNet:
-			self.rebuildVisionNet()
+			self.rebuildVisionNet(epochs = epochs, log = log, logInterval = logInterval, logAccuracy = logAccuracy)

@@ -115,20 +115,21 @@ if __name__ == '__main__':
 				os.system(clear)
 			elif option == 2:
 				if str(input("Are you sure (Y/N)? ")).lower().startswith("y"):
-					vision.rebuild() # okay I guess
-				print("Embeddings rebuilt")
+					vision.rebuild(log = True) # okay I guess
+				
+				print("Embeddings and VisionNet rebuilt")
 				enterToReturn()
 				os.system(clear)
 			elif option == 3:
 				if str(input("Are you sure (Y/N)? ")).lower().startswith("y"):
 					vision.rebuildEmbeddings() # okay I guess
-				print("VisionNet rebuilt")
+				print("Embeddings rebuilt")
 				enterToReturn()
 				os.system(clear)
 			elif option == 4:
 				if str(input("Are you sure (Y/N)? ")).lower().startswith("y"):
 					vision.rebuildVisionNet(log=True) # okay I guess
-				print("Embeddings and VisionNet rebuilt")
+				print("VisionNet rebuilt")
 				enterToReturn()
 				os.system(clear)
 			elif option == 5:
