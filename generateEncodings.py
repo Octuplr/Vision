@@ -13,7 +13,7 @@ def process_and_encode(images):
     for imagePath in tqdm(images):
         image = encoder.loadImageFile(imagePath) # Load image (this actually cache's the face inside the encoder.)
 
-        name = imagePath.split(os.path.sep)[-2] # the person's name is the name of the folder where the image comes from
+        name = os.path.basename(os.path.dirname(imagePath)) # the person's name is the name of the folder where the image comes from
         
         faceLocations = encoder.faceLocations()
         numberOfFaces = len(faceLocations) # Number of faces?

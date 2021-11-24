@@ -20,7 +20,7 @@ numberOfClassifications = 0
 def loadEncodings(location):
 	print("Loading encodings...")
 	with open(location, 'rb') as f:
-	    known_face_encodings = pickle.load(f)
+		known_face_encodings = pickle.load(f)
 
 	face_encodings = {}
 
@@ -105,8 +105,8 @@ if (not os.path.isdir("output/model_data/")):
 
 
 
-feature_set, one_hot_labels, idMappings = loadEncodings('output/testing-encodings.dat')
-# feature_set, one_hot_labels, idMappings = loadEncodings('output/encodings.dat')
+# feature_set, one_hot_labels, idMappings = loadEncodings('output/testing-encodings.dat')
+feature_set, one_hot_labels, idMappings = loadEncodings('output/encodings.dat')
 
 
 # https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw#:~:text=2/3%20the%20size%20of%20the%20input
@@ -144,7 +144,7 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 	print("Training correctness:", acc[0])
 	print("Average accuracy:\t", acc[1])
 	
-	fileName = str(m.attributes) + "-input_" + str(m.numberOfHiddenLayers+2) + "-layer_" + str(m.neurons) + "-neurons_" + str(m.output_labels) + "-classifications_model"
+	fileName = str(m.attributes) + "-input_" + str(m.numberOfHiddenLayers+2) + "-layer_" + str(m.neurons) + "-neurons_" + str(m.output_labels) + "-classifications_model-ID_" + self.neuralNetwork.modelID
 
 	# Save model
 	modelGeneric.save("output/model_data/" + fileName + ".ognn") # Saves without activations or input data, but with the output data?

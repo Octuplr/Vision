@@ -93,6 +93,10 @@ class faceEncoder():
 			return np.empty((0))
 
 		return np.linalg.norm(encodings - unknown, axis=1)
+	
+	def kNearestNeighboorsMatch(self, encodings, unknown, tolerance = 0.7):
+		return list(self.encodingDistance(encodings, unknown) <= tolerance)
+
 
 	def loadImageFile(self, file, mode = "RGB"):
 		im = (PIL.Image.open(file)).convert(mode)
@@ -148,3 +152,8 @@ class faceEncoder():
 			self.faceDetector = None
 			gc.collect()
 			return [np.array(self.encoder.compute_face_descriptor(image, landmarkSet, self.numberOfJitters)) for landmarkSet in landmarks]
+
+	def cleanUp(self):
+		del self.faceDetector
+		self.faceDetector = None
+		gc.collect()

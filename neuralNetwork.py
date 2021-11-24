@@ -11,6 +11,7 @@ import io
 # Generating random ID
 import random
 import string
+from hashlib import sha256
 
 def sigmoid(x): # Squish input to (0,1)
     return 1/(1+np.exp(-x))
@@ -90,9 +91,9 @@ class genericNeuralNetwork:
 		self.implementationData = implementationData
 
 		# Generate a unique ID
-		self.modelID = hash(str(self.attributes) + "_" + str(hiddenLayers+2) + "_" + str(self.neurons) + "_" + str(self.output_labels))
+		self.modelID = sha256((str(self.attributes) + "_" + str(hiddenLayers+2) + "_" + str(self.neurons) + "_" + str(self.output_labels)).encode('utf-8')).hexdigest()
 		if hashData == True:
-			self.modelID = hash(str(self.modelID) + "_".join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(32)))
+			self.modelID = sha256( (str(self.modelID) + "_".join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(32))).encode('utf-8') ).hexdigest()
 
 
 		# We have n hidden layers, this requires n+2 weights/biases
@@ -200,6 +201,16 @@ class genericNeuralNetwork:
 		print("\tNumber of outputs: " + str(self.output_labels))
 		print("\tNumber of iterations: " + str(self.iterations))
 		# print("\tCurrent loss function: " + str(self.getLoss()))
+
+	def modelInfo(self):
+		data = {}
+		data['modelID'] = self.modelID
+		data['attributes'] = self.attributes
+		data['numberOfHiddenLayers'] = self.numberOfHiddenLayers
+		data['neurons'] = self.neurons
+		data['output_labels'] = self.output_labels
+		data['iterations'] = self.iterations
+		return data
 
 	def export(self, withOutput = True, withActivations = False, withInputData = False):
 		modelData = {}
