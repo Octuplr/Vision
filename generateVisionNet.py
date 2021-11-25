@@ -1,5 +1,5 @@
 import numpy as npA # ...
-import cupy as np # Numpy in GPU, questionable
+# import cupy as np # Numpy in GPU, questionable
 np = npA
 
 from neuralNetwork import genericNeuralNetwork
@@ -144,7 +144,7 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 	print("Training correctness:", acc[0])
 	print("Average accuracy:\t", acc[1])
 	
-	fileName = str(m.attributes) + "-input_" + str(m.numberOfHiddenLayers+2) + "-layer_" + str(m.neurons) + "-neurons_" + str(m.output_labels) + "-classifications_model-ID_" + self.neuralNetwork.modelID
+	fileName = str(m.attributes) + "-input_" + str(m.numberOfHiddenLayers+2) + "-layer_" + str(m.neurons) + "-neurons_" + str(m.output_labels) + "-classifications_model-ID_" + m.modelID
 
 	# Save model
 	modelGeneric.save("output/model_data/" + fileName + ".ognn") # Saves without activations or input data, but with the output data?

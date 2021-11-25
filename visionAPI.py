@@ -46,7 +46,10 @@ class Vision():
 
 		self.neuralNetwork = genericNeuralNetwork() # We don't have to pass any parameters since we load a built model. (We can reinitialize the class if we want to build a new model)
 		# load that mentioned model
-		self.neuralNetwork.loadFile(self.dataPath + self.modelName)
+		if os.path.isfile(self.dataPath + self.modelName):
+			self.neuralNetwork.loadFile(self.dataPath + self.modelName)
+		else:
+			self.log("!!! No model found. Please rebuild this.")
 
 		self.encoderSettings = encoderSettings
 		if not "shapeModelSize" in encoderSettings:
@@ -59,10 +62,17 @@ class Vision():
 			self.encoderSettings["numUpsamples"] = 0
 		self.encoder = faceEncoder(shapeModelSize = self.encoderSettings["shapeModelSize"], faceDetectorModel = self.encoderSettings["faceDetectorModel"], numJitters = self.encoderSettings["numJitters"], numUpsamples = self.encoderSettings["numUpsamples"])
 
-		with open(self.dataPath + self.encodingFile, 'rb') as f:
-			self.embeddings = pickle.load(f)
+		if os.path.isfile(self.dataPath + self.encodingFile):
+			with open(self.dataPath + self.encodingFile, 'rb') as f:
+				self.embeddings = pickle.load(f)
+		else:
+			self.log("!!! No embeddings file. Please rebuild this file.")
 
 	def log(self, msg):
+		"""
+		Helper function to log to console or file if desired
+		:param msg: String being logged (to either console and/or file)
+		"""
 		if self.logToConsole:
 			print(msg)
 
@@ -70,6 +80,9 @@ class Vision():
 
 
 	def refreshEmbeddings(self):
+		"""
+		Loads embeddings from the embeddings file
+		"""
 		with open(self.dataPath + self.encodingFile, 'rb') as f:
 			self.embeddings = pickle.load(f)
 
@@ -78,9 +91,8 @@ class Vision():
 		"""
 		Given an image, returns the employee's ID and the confidence of that labeling
 		:param image: JPG raw data (or if isFilePath, the file path)
-		:param drawOnImage: Whether or not we draw the bounding boxes and employee IDs on the image
+		:param ifFilePath: Signifies if the image object is a string pointing to an image or if image is image data
 		:param tolerance: Confidence must be higher than this % to be accepted
-
 		"""
 		img
 		if isFilePath:
@@ -107,6 +119,20 @@ class Vision():
 		return associates, confidences
 
 	def addAssociatePunch(self, image, isFilePath = False, drawOnImage = False, tolerance = 70):
+		"""
+		Given an image, returns the employee's ID and the confidence of that labeling
+		:param image: JPG raw data (or if isFilePath, the file path)
+		:param ifFilePath: Signifies if the image object is a string pointing to an image or if image is image data
+		:param drawOnImage: Whether or not we draw the bounding boxes and employee IDs on the image
+		:param tolerance: Confidence must be higher than this % to be accepted
+		"""
+
+		if (self.neuralNetwork.implementationData) is None:
+			return
+		if (self.embeddings) is None:
+			return
+
+
 		ts = time.time() # This is the current time. Do not penalize the associate for the system processing time.
 		img = None
 		if isFilePath:
@@ -188,11 +214,19 @@ class Vision():
 
 	# Model specific
 	def modelInfo(self):
+		"""
+		Returns the neural network's information (ID, neuron count, etc)
+		"""
 		return self.neuralNetwork.modelInfo()
 
 
 	# Build/Rebuild database:
 	def loadEncodings(self, path):
+		"""
+		Builds the feature set and one_hot_labels set for training the neural network
+		:param path: The path to the embeddings file
+		:return: Feature set, one_hot_labels, and the ID mappings (ID -> model output)
+		"""
 		if path is not None:
 			print(path)
 			with open(path, 'rb') as f:
@@ -246,9 +280,9 @@ class Vision():
 
 	def rebuildVisionNet(self, epochs = 50000, log = False, logInterval = 100, logAccuracy = True):
 		"""
-		Loads an image file (.jpg, .png, etc) into a numpy array
+		Builds the Vision net neural network
 
-		:param epochs: image file name or file object to load
+		:param epochs: Number of times the model gets trained
 		:param log: Whether or not training data is logged
 		:param logInterval: Log every n number of epochs
 		:param logAccuracy: Include the average training accuracy with the log data
@@ -318,7 +352,9 @@ class Vision():
 
 
 	def rebuildEmbeddings(self):
-		# find images
+		"""
+		Rebuilds the embeddings file using the photos in the dataSetDirectory
+		"""
 		images = []
 		for direc, _, files in os.walk(self.dataPath + self.datasetDirectory):
 			for file in files:

@@ -1,5 +1,5 @@
 import numpy as np
-import cupy as cp # Numpy in GPU, questionable
+# import cupy as cp # Numpy in GPU, questionable
 
 # for saving/exporting model
 from copy import deepcopy # create export
@@ -62,14 +62,14 @@ class genericNeuralNetwork:
 
 		'''
 		np = numpyLibrary
-		if (np == cp):
-			self.library = "cupy"
-			self.input = np.array(data)
-			self.output = np.array(output)
-		else:
-			self.library = "numpy"
-			self.input = data
-			self.output = output
+		# if (np == cp):
+		# 	self.library = "cupy"
+		# 	self.input = np.array(data)
+		# 	self.output = np.array(output)
+		# else:
+		self.library = "numpy"
+		self.input = data
+		self.output = output
 
 		self.lr = learningRate		# Learning rate
 		self.neurons = neurons
@@ -356,6 +356,8 @@ class genericNeuralNetwork:
 			try:
 				with open(filename, 'rb') as f:
 					self.load(pickle.load(f))
+			except FileNotFoundError as exp:
+				raise LoadException("No such model file found.")
 			except io.UnsupportedOperation as exp:
 				raise LoadException("No such model file found.")
 		else:
