@@ -90,7 +90,11 @@ _If you running Windows, you'll have to install Visual Studio C++ packages_
 `pip install opencv-python`
 
 `pip install numpy` _Numpy..._
+
 `pip install pillow` _Image processing_
+
 `pip install tqdm` _Progress bar_
+
 `pip install matplotlib` _Plotting data_
+
 `pip install pandas` _Logging data_
