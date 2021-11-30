@@ -149,11 +149,28 @@ if __name__ == '__main__':
 		needsHelp = True
 		os.system(clear)
 
-	elif (args[1] == "-train"):
-		vision.rebuild()
-		quit()
 	elif (args[1] == "-h" or args[1] == "-help" or args[1] == "-?"):
 		needsHelp = True
+
+	elif (args[1] == "-train" or args[1] == "-t"):
+		vision.rebuild()
+		quit()
+
+	elif (args[1] == "-rebuild" or args[1] == "-r"):
+		log = False
+		if (argc >= 4):
+			if (args[3] == "-nolog" || args[3] == "-nl"):
+				log = False
+			else
+				log = True
+		if (argc >= 3):
+			if (args[2] == "-visionnet" or args[2] == "-v"):
+				vision.rebuildVisionNet(log = log)
+			elif (args[2] == "-embeddings" or args[2] == "-e"):
+				vision.rebuildEmbeddings()
+			elif (args[2] == "-all" or args[2] == "-both" or args[2] == "-a"):
+				vision.rebuild(log = log)
+
 	elif (args[1] == "-punch"):
 		if (argc >= 3):
 			if (args[2] == "-noshow" or args[2] == "-ns"):
@@ -163,15 +180,6 @@ if __name__ == '__main__':
 			quit();
 		else:
 			punch()
-			quit();
-
-	elif (argc == 3 and (args[1] == "-a" or args[1] == "-append")):
-		AppendEncoding(args[2])
-		quit();
-
-	elif (argc >= 4):
-		if (args[1] == "-append" or args[1] == "-a"):
-			AppendEncoding(args[2], args[3])
 			quit();
 
 	print('Usage: %s\n' % args[0]

@@ -34,7 +34,7 @@ def ga(model, data, output):
 	return [(acc/len(data)*100), (acc2/len(data)), accuracyFigures]
 
 class Vision():
-	def __init__(self, dataPath = "/data/", modelName = "model.ognn", datasetDirectory = "AssociatePhotos", encodingFile = "encodings.dat", attendanceFile = "punches.csv", encoderSettings = {}, logToFile = True, logToConsole = False, useCupy = False):
+	def __init__(self, dataPath = "/data/", modelName = "model.ognn", datasetDirectory = "AssociatePhotos", encodingFile = "encodings.dat", attendanceFile = "punches.csv", encoderSettings = {}, logToFile = True, logToConsole = False):
 		#// to do: add directory checking
 		self.dataPath = dataPath
 		self.modelName = modelName
