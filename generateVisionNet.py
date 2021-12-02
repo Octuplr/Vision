@@ -110,8 +110,8 @@ feature_set, one_hot_labels, idMappings = loadEncodings('output/encodings.dat')
 
 
 # https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw#:~:text=2/3%20the%20size%20of%20the%20input
-modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int((256/3)+numberOfClassifications), numpyLibrary=np, implementationData=idMappings)
-# modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int(numberOfClassifications*8), numpyLibrary=np, implementationData=idMappings)
+# modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int((256/3)+numberOfClassifications), numpyLibrary=np, implementationData=idMappings)
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int(numberOfClassifications*8), numpyLibrary=np, implementationData=idMappings)
 # modelGeneric = genericNeuralNetwork()
 
 #found 50000 iterations with 32 neurons works well

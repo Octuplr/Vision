@@ -169,7 +169,7 @@ class Vision():
 		associates = []
 		confidences = []
 		for (top, right, bottom, left), unknownFaceEmbedding in zip(faceLocations, unknownEmbeddings):
-			kNNDistance = self.encoder.encodingDistance(np.array(list(self.embeddings.values())), unknownFaceEmbedding)
+			# kNNDistance = self.encoder.encodingDistance(np.array(list(self.embeddings.values())), unknownFaceEmbedding)
 
 			rawPredict = self.neuralNetwork.predictRaw([unknownFaceEmbedding]) # Returns the raw label predictions
 			index = rawPredict.argmax() # The label with the highest confidence

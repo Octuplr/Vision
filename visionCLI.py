@@ -82,6 +82,8 @@ def ga(model, data, output):
 		if predictionLabel == np.argmax(yy):
 			acc+=1
 			acc2 = acc2 + accuracy
+		else:
+			print("Invalid: " + str(accuracy) + " | predictionLabel: " + str(predictionLabel) + "!=" + str(np.argmax(yy)))
 
 	return [(acc/len(data)*100), (acc2/len(data)), accuracyFigures]
 
@@ -159,9 +161,9 @@ if __name__ == '__main__':
 	elif (args[1] == "-rebuild" or args[1] == "-r"):
 		log = False
 		if (argc >= 4):
-			if (args[3] == "-nolog" || args[3] == "-nl"):
+			if (args[3] == "-nolog" or args[3] == "-nl"):
 				log = False
-			else
+			else:
 				log = True
 		if (argc >= 3):
 			if (args[2] == "-visionnet" or args[2] == "-v"):
