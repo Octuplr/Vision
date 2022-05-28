@@ -1,14 +1,31 @@
-_This branch represents the final code submitted with the [Vision Paper](https://projects.cnewb.co/CSCE585/VisionPaper.pdf).\
-This branch is no longer maintained and is **purly for archival purposes**.\
-Branch will remained **locked** to prevent changes._
-
-
-
-
 # Vision
 UofSC|CSCE585:
 A Machine Learning project to clock employees in and out using their face.
 
+[View the paper](https://projects.cnewb.co/CSCE585/VisionPaper.pdf)
+
+
+## Data
+Training data is stored in `./data/AssociatePhotos/`\
+Each "employee" has their own folder containing the training photos of them.\
+Employee folders using this scheme: `<AssociateID>.<AssociateName>` _where `<AssociateID>` is their employee ID and `<AssociateName>` is the displayed name of that associate_.
+
+
+[See Associate Photos layout.txt](data/Associate%20Photos%20layout.txt) for a diagram.
+
+
+Within the encodings the associate is stored by their ID.  The VisonNet model stores associate data in sequence from 0 to _n_ ( _n_ being the number of associates). _this is done due to the model requiring n number of outputs to function_\
+A key pair object is used to match associate IDs to the output of the visionNet model (using the model's `implementationData` as that object)\
+
+At the moment the associate IDs are not mapped back to the associate names (meaning the names have no meaning past sorting your folders).
+
+
+Testing data is stored in `./data/TestingPhotos/` and follows the same rules as above.\
+When testing the vision model using the visionCLI, the testing data is pulled from the testing encodings file `./output/testing-encodings.dat`.\
+You must rebuild this file using the `generateEncodings.py` script. This will build an encodings file for the visionNet model (->`./output/encodings.dat`) _and_ generate a similar encodings file using the testing photos (->`./output/testing-encodings.dat`)
+
+
+***
 
 
 ## Basic usage (command line)
@@ -21,6 +38,16 @@ A Machine Learning project to clock employees in and out using their face.
 `python visionCLI.py -(rebuild | r) (embeddings | e)` rebuilds the embeddings file
 
 `python visionCLI.py -(punch | p) [image_path] -[noshow | ns]` to "check"/punch an associate in (if noshow is present, the image (with bounding boxes) will not be shown)
+
+Command line interface tool: (no arguments)\
+`1) Clock associate in`: Similar to the `-punch` arg, main function of the program.\
+`2) Rebuild databases`: Rebuilds both the encodings and VisionNet model\
+`3) Rebuild face embeddings`: Rebuilds the encodings file (update photo data for the AI)\
+`4) Rebuild VisionNet model`: Rebuilds the VisionNet model (the AI)\
+`5) Quit`: Quits the application
+
+`6) Test punches`: A loop constantly calling the `punch()` function (to easily test punch-ins over-and-over)\
+`7) Test accuracy`: Supplies the faces in the testing encodings file to the VisionNet model to test the number of correct prodictions (and average confidence (accuracy) level).
 
 
 ***
