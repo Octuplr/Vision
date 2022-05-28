@@ -22,7 +22,7 @@ def sigmoid_derv(s): # Obv. faster, questionable if improves accuracy.
     # return sigmoid(s) *(1-sigmoid (s))
 	return s * (1 - s)
 
-def softmax(A):
+def softmax(A): # Squishes input to (0-1), but all the values sum up to 1. (Used on the output layer)
 	exps = np.exp(A - np.max(A, axis=1, keepdims=True))
 	return exps/np.sum(exps, axis=1, keepdims=True)
     # expA = np.exp(A)

@@ -129,8 +129,6 @@ class Vision():
 
 		if (self.neuralNetwork.implementationData) is None:
 			return
-		if (self.embeddings) is None:
-			return
 
 
 		ts = time.time() # This is the current time. Do not penalize the associate for the system processing time.
@@ -148,6 +146,7 @@ class Vision():
 		image = np.array(img)
 
 		faceLocations = self.encoder.faceLocations(image)
+		faceLandmarks = self.encoder.faceLandmarks(image, faceLocations)[0]
 		unknownEmbeddings = self.encoder.encode(image, faceLocations)
 
 		if drawOnImage:
@@ -185,9 +184,17 @@ class Vision():
 				attendanceFile.write(str(label) + ", " + str(date) + ", " + str(timeStamp) + ", " + str(confidence) + "\n")
 
 				if drawOnImage:
-					draw.rectangle( ((left, top), (right, bottom)), outline=(50, 255, 50)) # Green box (identified)
-					draw.rectangle( ((left, bottom - 20), (right, bottom)), fill=(50, 255, 50), outline=(50, 255, 50))
-					draw.text((left + 3, bottom - 13), "ID: " + str(label) + " (" + str(confidence) + "%)", fille=(200, 200, 200, 255))
+					# draw.rectangle( ((left, top), (right, bottom)), outline=(50, 255, 50)) # Green box (identified)
+					# draw.rectangle( ((left, bottom - 20), (right, bottom)), fill=(50, 255, 50), outline=(50, 255, 50))
+					# draw.text((left + 3, bottom - 13), "ID: " + str(label) + " (" + str(confidence) + "%)", fille=(200, 200, 200, 255))
+
+					r = 2;
+					for n in range(0,68):
+						x = faceLandmarks.part(n).x
+						y = faceLandmarks.part(n).y
+						draw.ellipse([(x-r, y-r), (x+r, y+r)], fill=(100,100,255,255))
+						draw.ellipse([(x-(r/2), y-(r/2)), (x+(r/2), y+(r/2))], fill=(255,255,255,255))
+
 			else:
 				self.log("Low/Unknown face detected (possible ID: " + str(label) + ", confidence: " + str(confidence) + "%).")
 				if drawOnImage:
@@ -202,9 +209,9 @@ class Vision():
 			img.save(self.dataPath + "Punches/Punch_"+date+"_"+timeStamp+".png", format="PNG")
 
 		attendanceFile.close()
-		del draw
 
 		if drawOnImage:
+			del draw
 			return associates, confidences, img
 		else:
 			return associates, confidences
@@ -272,6 +279,8 @@ class Vision():
 
 		# Build output label
 		one_hot_labels = np.zeros((numberOfEncodings, self.numberOfClassifications))
+
+		print(feature_set)
 
 		for i in range(numberOfEncodings):
 			one_hot_labels[i, labels[i]] = 1
