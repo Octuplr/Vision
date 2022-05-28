@@ -17,7 +17,10 @@ import os # filesystem, check/make dir
 
 # First we need to load our values (the encodings)
 numberOfClassifications = 0
+
 def loadEncodings(location):
+	global numberOfClassifications
+	numberOfClassifications = 0
 	print("Loading encodings...")
 	with open(location, 'rb') as f:
 		known_face_encodings = pickle.load(f)
@@ -49,7 +52,6 @@ def loadEncodings(location):
 	feature_set_builder = None
 	labels = None
 	numberOfEncodings = 0
-	global numberOfClassifications
 	for key in face_encodings:
 		if feature_set_builder is None:
 			feature_set_builder = np.array(face_encodings[key])
@@ -105,8 +107,8 @@ if (not os.path.isdir("output/model_data/")):
 
 
 
-# feature_set, one_hot_labels, idMappings = loadEncodings('output/testing-encodings.dat')
 feature_set, one_hot_labels, idMappings = loadEncodings('output/encodings.dat')
+feature_set_testing, one_hot_labels_testing, a = loadEncodings('output/testing-encodings.dat')
 
 
 # https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw#:~:text=2/3%20the%20size%20of%20the%20input
@@ -116,12 +118,13 @@ modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hidde
 
 #found 50000 iterations with 32 neurons works well
 
-def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
+def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True, logTestingData = False):
 	# Epochs: number of cycles of training
 	# Log: Log both the loss function and training accuracy/correctness
 	error_cost = []
 	tAccuracy = []
-	col_names = ['Loss Function','Training correctness','Average training accuracy']
+	vAccuracy = []
+	col_names = ['Epoch','Loss Function','Training correctness','Average training accuracy','Testing correctness','Average testing accuracy']
 	logCSV = pd.DataFrame(columns = col_names)
 	
 	m.printInfo()
@@ -137,8 +140,12 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 				acc = None
 				if logAccuracy == True:
 					acc = ga(deepcopy(m), feature_set, one_hot_labels)
+					acc2 = ['','']
+					if logTestingData:
+						acc2 = ga(deepcopy(m), feature_set_testing, one_hot_labels_testing)
 					tAccuracy.append(acc[1])
-				logCSV.loc[len(logCSV)] = [loss, acc[0], acc[1]]
+					vAccuracy.append(acc2[1])
+				logCSV.loc[len(logCSV)] = [x, loss, acc[0], acc[1], acc2[0], acc2[1]]
 
 	acc = ga(m, feature_set, one_hot_labels)
 	print("Training correctness:", acc[0])
@@ -156,7 +163,8 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 		# Plot
 		fig, ax = plt.subplots()
 		fig.suptitle("Model results")
-		ax.set_title(fileName)
+		# ax.set_title(fileName)
+		ax.set_title(str(m.numberOfHiddenLayers+2) + " layers | " + str(m.neurons) + " neurons")
 		ax.set_xlabel("Run (x" + str(logInterval) + ")")
 		ax.plot(npA.arange(1,len(error_cost)+1), error_cost, color="blue")
 		ax.set_ylabel("Loss", color="blue")
@@ -164,18 +172,60 @@ def train(m, epochs = 50000, log = True, logInterval = 100, logAccuracy = True):
 		if logAccuracy:
 			ax2 = plt.twinx()
 			ax2.plot(npA.arange(1,len(tAccuracy)+1), tAccuracy, color="orange")
-			# ax2.plot(np.arange(1,len(vAccuracy)+1), vAccuracy, color="brown")
+			ax2.plot(np.arange(1,len(vAccuracy)+1), vAccuracy, color="brown")
 			ax2.set_ylabel("Average accuracy %", color="orange")
 		
+		leg = plt.legend()
+		# get the lines and texts inside legend box
+		leg_lines = leg.get_lines()
+		leg_texts = leg.get_texts()
+		# bulk-set the properties of all lines and texts
+		plt.setp(leg_lines, linewidth=4)
+		plt.setp(leg_texts, fontsize='x-large')
 		plt.savefig("output/model_data/" + fileName + ".svg", )
-		plt.show()
+		plt.axis([-5, 500, 0, 105])
+		plt.savefig("output/model_data/ZoomedIn(x--5,500.y-0,105)." + fileName + ".svg", )
+		# plt.show()
 		plt.clf()
 	return [error_cost, tAccuracy]
 
 # modelGeneric.loadFile("output/model.ognn")
 # modelGeneric.save("output/model.json", fileType = 1)
 
-train(modelGeneric, 50000, logInterval = 1000)
+'''
+0 hidden
+1 hidden
+2 hidden
+10 hidden
+
+0 hidden:
+nC*6
+nC*7
+nC*8
+nC*9
+nC*10
+
+((inputs*2)/3)+nC
+
+'''
+
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 0, neurons = int(numberOfClassifications*8), numpyLibrary=np, implementationData=idMappings)
+train(modelGeneric, 100000, logInterval = 25, logTestingData = True)
+
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 1, neurons = int(numberOfClassifications*8), numpyLibrary=np, implementationData=idMappings)
+train(modelGeneric, 100000, logInterval = 50, logTestingData = True)
+
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 2, neurons = int(numberOfClassifications*8), numpyLibrary=np, implementationData=idMappings)
+train(modelGeneric, 100000, logInterval = 50, logTestingData = True)
+
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 3, neurons = int(numberOfClassifications*8), numpyLibrary=np, implementationData=idMappings)
+train(modelGeneric, 100000, logInterval = 50, logTestingData = True)
+
+modelGeneric = genericNeuralNetwork(np.array(feature_set), one_hot_labels, hiddenLayers = 4, neurons = int(numberOfClassifications*8), numpyLibrary=np, implementationData=idMappings)
+train(modelGeneric, 100000, logInterval = 50, logTestingData = True)
+
+
+# train(modelGeneric, 1000000, logInterval = 25, logTestingData = True)
 # train(modelGeneric, 500000, log=False)
 
 
