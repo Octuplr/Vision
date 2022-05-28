@@ -1,6 +1,15 @@
+_This branch represents the final code submitted with the [Vision Paper](https://projects.cnewb.co/CSCE585/VisionPaper.pdf).\
+This branch is no longer maintained and is **purly for archival purposes**.\
+Branch will remained **locked** to prevent changes._
+
+
+
+
 # Vision
 UofSC|CSCE585:
 A Machine Learning project to clock employees in and out using their face.
+
+
 
 ## Basic usage (command line)
 `python visionCLI.py` to use the command line interface tool
