@@ -5,3 +5,12 @@ data/
 │  │
 │  ├─ 1.DannyDevito/
 │  │  ├─ dv1.jpg
+
+
+data/
+├─ TestingPhotos/
+│  ├─ {ID}.{FirstName}{LastName}/
+│  │  ├─ {photoID}.jpg
+│  │
+│  ├─ 1.DannyDevito/
+│  │  ├─ danny-yelling.jpg

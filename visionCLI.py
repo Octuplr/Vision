@@ -83,7 +83,7 @@ def ga(model, data, output):
 			acc+=1
 			acc2 = acc2 + accuracy
 		else:
-			print("Invalid: " + str(accuracy) + " | predictionLabel: " + str(predictionLabel) + "!=" + str(np.argmax(yy)))
+			# print("Invalid: " + str(accuracy) + " | predictionLabel: " + str(predictionLabel) + "!=" + str(np.argmax(yy)))
 
 	return [(acc/len(data)*100), (acc2/len(data)), accuracyFigures]
 
